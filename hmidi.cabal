@@ -26,23 +26,23 @@ Flag NoNoteOff
   Default:               False
 
 Library
-  Exposed-Modules:     System.MIDI.Base, System.MIDI
 
+  Build-Depends:       base
+  Exposed-Modules:     System.MIDI.Base, System.MIDI
+  
   if os(darwin)
-    Build-Depends:       base
     Exposed-Modules:     System.MacOSX.CoreFoundation, System.MacOSX.CoreAudio, System.MacOSX.CoreMIDI 
     other-modules:       System.MIDI.MacOSX
     frameworks:          CoreFoundation, CoreAudio, CoreMIDI
     
   if os(windows) 
-    Build-Depends:       base, Win32
+    Build-Depends:       Win32
     Exposed-Modules:     System.Win32.MIDI
     other-modules:       System.MIDI.Win32    
     extra-libraries:     winmm
 
   -- this is just to be able to produce a Haddock documentation on a Linux system
   if !os(darwin) && !os(windows)
-    Build-Depends:       base
     other-modules:       System.MIDI.Placeholder
     
   Extensions:            ForeignFunctionInterface, CPP, TypeSynonymInstances, FlexibleInstances, EmptyDataDecls
