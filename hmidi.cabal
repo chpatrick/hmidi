@@ -46,10 +46,10 @@ Library
     other-modules:       System.MIDI.Placeholder
     
   Extensions:            ForeignFunctionInterface, CPP, TypeSynonymInstances, FlexibleInstances, EmptyDataDecls
+  ghc-options:         -threaded 
   if flag(NoNoteOff)
-    ghc-options:         -threaded -DHMIDI_NO_NOTEOFF 
-  else 
-    ghc-options:         -threaded 
+    cpp-options:           -DHMIDI_NO_NOTEOFF 
+ 
 
 
 
