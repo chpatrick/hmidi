@@ -38,7 +38,7 @@ Library
     Build-Depends:       base, Win32
     Exposed-Modules:     System.Win32.MIDI
     other-modules:       System.MIDI.Win32    
-    extra-libraries:     libwinmm
+    extra-libraries:     winmm
 
   -- this is just to be able to produce a Haddock documentation on a Linux system
   if !os(darwin) && !os(windows)
