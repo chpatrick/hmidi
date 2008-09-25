@@ -60,7 +60,7 @@ import Foreign
 import Foreign.Storable
 
 import System.Win32.Types
-import System.MIDI.Spec
+import System.MIDI.Base
 
 maxPNAMELEN    = 32  :: Int
 maxERRORLENGTH = 256 :: UINT

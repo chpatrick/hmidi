@@ -2,7 +2,7 @@
 -- |A lowest common denominator interface to the Win32 and MacOSX MIDI bindings, Win32 part. 
 
 module System.MIDI.Win32 
-  ( module System.MIDI.Spec
+  ( module System.MIDI.Base
 
   , Source
   , Destination
