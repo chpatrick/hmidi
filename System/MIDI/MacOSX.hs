@@ -147,7 +147,7 @@ myMIDIReadProc packets myptr _  = do
       putMVar mv conn      -- do not forget to put it back!
 
 -- |Opens a MIDI Source.
--- There are two possibilites to receive MIDI messages. The user can either support a callback function,
+-- There are two possibilites to receive MIDI messages. The user can either supply a callback function,
 -- or get the messages from an asynchronous buffer. However, mixing the two approaches is not allowed.
 openSource :: Source -> Maybe ClientCallback -> IO Connection 
 openSource src@(Source endpoint) mcallback = do

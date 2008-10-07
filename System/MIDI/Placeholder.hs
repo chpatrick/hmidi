@@ -64,7 +64,7 @@ getModel = undefined
 getManufacturer = undefined
 
 -- |Opens a MIDI Source.
--- There are two possibilites to receive MIDI messages. The user can either support a callback function,
+-- There are two possibilites to receive MIDI messages. The user can either supply a callback function,
 -- or get the messages from an asynchronous buffer. However, mixing the two approaches is not allowed.
 openSource :: Source -> Maybe ClientCallback -> IO Connection 
 openSource = undefined
