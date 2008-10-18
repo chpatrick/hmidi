@@ -1,13 +1,13 @@
 
 --
 -- Module      : System.MIDI
--- Version     : 0.1
+-- Version     : 0.2
 -- License     : BSD3
 -- Author      : Balazs Komuves
--- Maintainer  : bkomuves+hmidi@gmail.com
+-- Maintainer  : bkomuves (plus) hackage (at) gmail (dot) com
 -- Stability   : experimental
 -- Portability : not portable
--- Tested with : GHC 6.8.2
+-- Tested with : GHC 6.8.3
 --
 
 -- |A lowest common denominator interface to the Win32 and MacOSX MIDI bindings. 
@@ -115,7 +115,7 @@ getEvents = S.getEvents
 send :: Connection -> MidiMessage -> IO ()
 send = S.send
  
--- |Sends a system exclusive message. You shouldn't include the starting \/ trailing bytes 0xF0 and 0xF7.
+-- |Sends a system exclusive message. You should /not/ include the starting \/ trailing bytes 0xF0 and 0xF7.
 -- 
 -- Note: On Win32, the connection must be a `Destination`
 sendSysEx :: Connection -> [Word8] -> IO ()

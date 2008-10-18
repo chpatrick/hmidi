@@ -42,7 +42,20 @@ import System.IO.Unsafe
 
 import System.MacOSX.CoreFoundation
 import System.MacOSX.CoreAudio
-import System.MacOSX.CoreMIDI
+import System.MacOSX.CoreMIDI hiding (ShortMessage) 
+import qualified System.MacOSX.CoreMIDI as CM
+
+--------------------------------------------------
+
+-- there are two identical ShortMessage definitions in two separate modules;
+-- these function bridges them
+_to_CM_SM :: ShortMessage -> CM.ShortMessage
+_to_CM_SM (ShortMessage a b c d) = CM.ShortMessage a b c d
+
+_from_CM_SM :: CM.ShortMessage -> ShortMessage
+_from_CM_SM (CM.ShortMessage a b c d) = ShortMessage a b c d
+
+---------------
 
 -- |Gets all the events from the buffer.
 getEvents :: Connection -> IO [MidiEvent]
@@ -123,7 +136,7 @@ nanoToMili n = fromIntegral $ div n 1000000
 convertShortMessage :: UInt64 -> (MIDITimeStamp,[Word8]) -> IO MidiEvent
 convertShortMessage t0 (ts',bytes) = do
   ts <- audioConvertHostTimeToNanos ts'
-  return $ MidiEvent (nanoToMili $ ts-t0) (translateShortMessage $ decodeShortMessage bytes) 
+  return $ MidiEvent (nanoToMili $ ts-t0) (translateShortMessage $ _from_CM_SM $ decodeShortMessage bytes) 
 
 myMIDIReadProc :: Ptr MIDIPacket -> Ptr () -> Ptr () -> IO ()
 myMIDIReadProc packets myptr _  = do
@@ -186,7 +199,7 @@ openDestination dst@(Destination endpoint) = do
 sendShortMessage :: Connection -> ShortMessage -> IO ()
 sendShortMessage conn msg = case cn_isInput conn of
   True  -> fail "sending short messages to midi sources is not supported"
-  False -> midiSend (cn_port conn) (Destination $ cn_endpoint conn) msg
+  False -> midiSend (cn_port conn) (Destination $ cn_endpoint conn) (_to_CM_SM msg)
    
 -- |Sends a short message. The connection must be a `Destination`.
 send :: Connection -> MidiMessage -> IO ()

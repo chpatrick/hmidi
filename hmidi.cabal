@@ -1,6 +1,6 @@
 
 Name:                hmidi
-Version:             0.1
+Version:             0.2
 Synopsis:            Binding to the OS level MIDI services
 Description:         Partial implementation of the MIDI 1.0 standard to communicate 
                      with physical or virtual MIDI devices, eg. MIDI keyboards. 
@@ -12,7 +12,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Balazs Komuves
 Copyright:           (c) 2008 Balazs Komuves
-Maintainer:          bkomuves+hmidi@gmail.com
+Maintainer:          bkomuves (plus) hackage (at) gmail (dot) com
 Stability:           Unstable
 Category:            Sound, System
 Tested-With:         GHC == 6.8.2
@@ -21,19 +21,24 @@ Build-Type:          Simple
 extra-source-files:  examples/monitor.hs, examples/chords.hs, examples/playmidi.hs, 
                      examples/SMF.hs, examples/GM.hs  
 
-Flag NoNoteOff
-  Description:           Translates NoteOff events to NoteOn events with velocity=0.
-  Default:               False
+Flag splitBase
+  Description: Choose the new smaller, split-up base package.
+
+Flag noNoteOff
+  Description:         Translates NoteOff events to NoteOn events with velocity=0.
+  Default:             False
 
 Library
+  if flag(splitBase)
+    Build-Depends: base >= 3 
+  else
+    Build-Depends: base <  3
 
-  Build-Depends:       base
   Exposed-Modules:     System.MIDI.Base, System.MIDI
   
   if os(darwin)
-    Exposed-Modules:     System.MacOSX.CoreFoundation, System.MacOSX.CoreAudio, System.MacOSX.CoreMIDI 
+    Build-Depends:       macosx-core < 0.1
     other-modules:       System.MIDI.MacOSX
-    frameworks:          CoreFoundation, CoreAudio, CoreMIDI
     
   if os(windows) 
     Build-Depends:       Win32
@@ -45,10 +50,10 @@ Library
   if !os(darwin) && !os(windows)
     other-modules:       System.MIDI.Placeholder
     
-  Extensions:            ForeignFunctionInterface, CPP, TypeSynonymInstances, FlexibleInstances, EmptyDataDecls
+  Extensions:          ForeignFunctionInterface, CPP, TypeSynonymInstances, FlexibleInstances, EmptyDataDecls
   ghc-options:         -threaded 
-  if flag(NoNoteOff)
-    cpp-options:           -DHMIDI_NO_NOTEOFF 
+  if flag(noNoteOff)
+    cpp-options:         -DHMIDI_NO_NOTEOFF 
  
 
 

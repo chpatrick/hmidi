@@ -21,14 +21,15 @@ type TimeStamp = Word32
 
 -- |A \"regular\" MIDI message.
 --
--- Remark: `NoteOff` not having a velocity field is a design decision, and a questionable one. According to the
+-- Remark: According to the
 -- MIDI standard, NoteOff also has a velocity. However, most keyboards do not use this feature (send the default
 -- value 64), and there are keyboards which do not send NoteOff messages at all, but send NoteOn messages with
--- zero velocity instead (for example the EMU Xboard series). I don't know what would be a good solution. 
--- At the moment, the code auto-translates NoteOn messages with zero velocity to NoteOff messages, and the
--- NoteOff velocity is ignored. This behaviour can be inverted with the Cabal flag NoNoteOff.
+-- zero velocity instead (for example the EMU Xboard series).  
+-- At the moment, the code auto-translates NoteOn messages with zero velocity to NoteOff messages with velocity 64.
+-- This behaviour can be inverted with the Cabal flag 'noNoteOff', which translates all NoteOff messages to
+-- NoteOn messages with velocity 0.
 data MidiMessage' 
-  = NoteOff         !Int          -- ^ Note Off (key)
+  = NoteOff         !Int !Int     -- ^ Note Off (key, velocity)
   | NoteOn          !Int !Int     -- ^ Note On (key, velocity)
   | PolyAftertouch  !Int !Int     -- ^ Polyphonic key pressure (key, pressure)
   | CC              !Int !Int     -- ^ Control Change (controller, value)
@@ -74,8 +75,8 @@ translate' msg k v = case msg of
    8  -> NoteOn k 0
    9  -> NoteOn k v
 #else
-   8  -> NoteOff k
-   9  -> if v>0 then NoteOn k v else NoteOff k
+   8  -> NoteOff k v
+   9  -> if v>0 then NoteOn k v else NoteOff k 64
 #endif
    10 -> PolyAftertouch k v
    11 -> CC k v
@@ -104,7 +105,7 @@ translate'' lo a b = case lo of
 untranslateShortMessage :: MidiMessage -> ShortMessage
 untranslateShortMessage (MidiMessage chn msg') = 
   case msg' of
-    NoteOff k           -> shortMessage chn  8 k 64
+    NoteOff k v         -> shortMessage chn  8 k v
     NoteOn  k v         -> shortMessage chn  9 k v
     PolyAftertouch k v  -> shortMessage chn 10 k v
     CC k v              -> shortMessage chn 11 k v
