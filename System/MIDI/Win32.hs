@@ -37,7 +37,7 @@ import Control.Concurrent.Chan
 import Data.List
 import Foreign
 import Foreign.StablePtr
-import System.IO.Unsafe
+import System.IO.Unsafe as Unsafe
 
 import System.Win32.Types
 import System.Win32.MIDI 

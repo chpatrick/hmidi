@@ -64,7 +64,7 @@ import Control.Monad
 import Control.Concurrent.MVar
 import Foreign
 import Foreign.Marshal
-import System.IO.Unsafe
+import System.IO.Unsafe as Unsafe
 
 --import System.MIDI.Base
 import System.MacOSX.CoreFoundation
@@ -108,9 +108,9 @@ foreign import ccall "&kMIDIPropertyName"          ptr_kMIDIPropertyName        
 foreign import ccall "&kMIDIPropertyManufacturer"  ptr_kMIDIPropertyManufacturer  :: Ptr CFStringRef
 foreign import ccall "&kMIDIPropertyModel"         ptr_kMIDIPropertyModel         :: Ptr CFStringRef
 
-kMIDIPropertyName         = unsafePerformIO $ peek ptr_kMIDIPropertyName
-kMIDIPropertyManufacturer = unsafePerformIO $ peek ptr_kMIDIPropertyManufacturer
-kMIDIPropertyModel        = unsafePerformIO $ peek ptr_kMIDIPropertyModel
+kMIDIPropertyName         = Unsafe.unsafePerformIO $ peek ptr_kMIDIPropertyName
+kMIDIPropertyManufacturer = Unsafe.unsafePerformIO $ peek ptr_kMIDIPropertyManufacturer
+kMIDIPropertyModel        = Unsafe.unsafePerformIO $ peek ptr_kMIDIPropertyModel
 
 ----- Send
 

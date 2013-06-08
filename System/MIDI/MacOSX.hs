@@ -45,7 +45,7 @@ import Control.Concurrent.Chan
 import Data.List
 import Foreign
 import Foreign.StablePtr
-import System.IO.Unsafe
+import System.IO.Unsafe as Unsafe
 
 import System.MacOSX.CoreFoundation
 import System.MacOSX.CoreAudio
@@ -159,7 +159,7 @@ data Connection = Connection
 
 ----- automatic client creation 
 
-client = unsafePerformIO $ newEmptyMVar :: MVar Client
+client = Unsafe.unsafePerformIO $ newEmptyMVar :: MVar Client
 
 {-
 #ifdef __GLASGOW_HASKELL__
