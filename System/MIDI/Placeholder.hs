@@ -23,11 +23,13 @@ module System.MIDI.Placeholder
   , sendSysEx
   , start
   , stop
-  
+
   , getNextEvent
+  , checkNextEvent
   , getEvents
+  , getEventsUntil
   , currentTime
-  
+    
   ) where
 
 import Data.Word
@@ -76,6 +78,14 @@ openDestination = undefined
 -- |Gets the next event from a buffered connection (see also `openSource`)
 getNextEvent :: Connection -> IO (Maybe MidiEvent)
 getNextEvent = undefined
+
+-- | Checks the next event from a buffered connection, but does not remove it from the buffer.
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent = undefined
+
+-- | Gets all the events with timestamp less than the specified from the buffer.
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil = undefined
 
 -- |Gets all the events from the buffer (see also `openSource`)
 getEvents :: Connection -> IO [MidiEvent]
