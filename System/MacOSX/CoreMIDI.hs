@@ -286,6 +286,7 @@ data NotificationMessageID
   | ThruConnectionsChanged  
   | SerialPortOwnerChanged  
   | MIDIMsgIOError 
+  deriving Show
  
 ----- encode / decode 
 
@@ -301,20 +302,21 @@ encodeShortMessageList :: [ShortMessage] -> [Word8]
 encodeShortMessageList list = concatMap encodeShortMessage list
 
 encodeShortMessage :: ShortMessage -> [Word8]
-encodeShortMessage (ShortMessage chn' msg' bt1 bt2) =
+encodeShortMessage sm@(ShortMessage chn' msg' bt1 bt2) =
   case msg of
-    8  -> [cmd,bt1,bt2]   
-    9  -> [cmd,bt1,bt2]  
-    10 -> [cmd,bt1,bt2]  
-    11 -> [cmd,bt1,bt2]  
-    12 -> [cmd,bt1]  
-    13 -> [cmd,bt1]  
-    14 -> [cmd,bt1,bt2]  
+    8  -> [cmd,bt1,bt2]     -- note off
+    9  -> [cmd,bt1,bt2]     -- note on
+    10 -> [cmd,bt1,bt2]     -- aftertouch
+    11 -> [cmd,bt1,bt2]     -- control change
+    12 -> [cmd,bt1]         -- program chane
+    13 -> [cmd,bt1]         -- channel pressure
+    14 -> [cmd,bt1,bt2]     -- pitchwheel
     15 -> case chn of
-      2 -> [cmd,bt1,bt2]
-      3 -> [cmd,bt1]
+      2 -> [cmd,bt1,bt2]  -- song position
+      3 -> [cmd,bt1]      -- song select
       0 -> error "SysEx is not a short message!"
-      _ -> [cmd]
+      _ -> [cmd]          -- all the rest are one-byte messages
+    _ -> error $ "invalid MIDI message high nibble: " ++ show sm 
   where 
     chn = 15 .&. chn'
     msg = 15 .&. msg'

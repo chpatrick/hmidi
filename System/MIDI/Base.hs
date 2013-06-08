@@ -42,10 +42,10 @@ data MidiMessage'
 data MidiMessage 
   = MidiMessage  !Int !MidiMessage'    -- ^ first argument is the MIDI channel (1..16)
   | SysEx        [Word8]               -- ^ not including the bytes 0xf0, 0xf7
-  | SongPosition !Int
+  | SongPosition !Int                  -- ^ measured in "MIDI beats" (1/16th notes).
   | SongSelect   !Int 
   | TuneRequest
-  | SRTClock
+  | SRTClock                           -- ^ clock is sent 24 times per quarter note
   | SRTStart
   | SRTContinue 
   | SRTStop
@@ -111,20 +111,28 @@ untranslateShortMessage (MidiMessage chn msg') =
     CC k v              -> shortMessage chn 11 k v
     ProgramChange k     -> shortMessage chn 12 k 0
     Aftertouch k        -> shortMessage chn 13 k 0
-    PitchWheel n        -> let m = min 16383 $ max 0 $ n + 8192 in shortMessage chn 14 (m.&.127) (shiftR m 7) 
+    PitchWheel n        -> let m = min 16383 $ max 0 $ n + 8192 
+                           in  shortMessage chn 14 (m.&.127) (shiftR m 7) 
 
-untranslateShortMessage (SongPosition p) = shortMessage 15  3 (p.&.7) (shiftR p 7) 
-untranslateShortMessage (SongSelect   s) = shortMessage 15  3 (fromIntegral s) 0 
-untranslateShortMessage  TuneRequest     = shortMessage 15  6 0 0 
-untranslateShortMessage  SRTClock        = shortMessage 15  8 0 0 
-untranslateShortMessage  SRTStart        = shortMessage 15 10 0 0 
-untranslateShortMessage  SRTContinue     = shortMessage 15 11 0 0 
-untranslateShortMessage  SRTStop         = shortMessage 15 12 0 0 
-untranslateShortMessage  ActiveSensing   = shortMessage 15 14 0 0 
-untranslateShortMessage  Reset           = shortMessage 15 15 0 0 
+untranslateShortMessage (SongPosition p) = sysShortMessage  2 (p.&.7) (shiftR p 7) 
+untranslateShortMessage (SongSelect   s) = sysShortMessage  3 (fromIntegral s) 0 
+untranslateShortMessage  TuneRequest     = sysShortMessage  6 0 0 
+untranslateShortMessage  SRTClock        = sysShortMessage  8 0 0 
+untranslateShortMessage  SRTStart        = sysShortMessage 10 0 0 
+untranslateShortMessage  SRTContinue     = sysShortMessage 11 0 0 
+untranslateShortMessage  SRTStop         = sysShortMessage 12 0 0 
+untranslateShortMessage  ActiveSensing   = sysShortMessage 14 0 0 
+untranslateShortMessage  Reset           = sysShortMessage 15 0 0 
 untranslateShortMessage  Undefined       = error "cannot untranslate Undefined" 
 untranslateShortMessage (SysEx _)        = error "cannot untranslate SysEx" 
- 
+
+-- high nibble = message
+-- low nibble = chn, or submessage when msg=15 (system messages)
+sysShortMessage :: Int -> Int -> Int -> ShortMessage
+sysShortMessage chn bt1 bt2 = 
+  ShortMessage (fromIntegral chn) 15 (fromIntegral bt1) (fromIntegral bt2) 
+
+-- regular short message 
 shortMessage :: Int -> Int -> Int -> Int -> ShortMessage
 shortMessage chn msg bt1 bt2 = 
   ShortMessage (fromIntegral chn - 1) (fromIntegral msg) (fromIntegral bt1) (fromIntegral bt2)
