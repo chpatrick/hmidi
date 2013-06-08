@@ -37,10 +37,18 @@ module System.MIDI
   , stop
   
   , getNextEvent
+  , checkNextEvent
   , getEvents
+  , getEventsUntil
   , currentTime
   
+#ifdef darwin_HOST_OS  
+  , createDestination 
+  , createSource
+#endif   
   ) where
+
+--------------------------------------------------------------------------------
 
 import Data.Word (Word8,Word32)
 import System.MIDI.Base
@@ -103,11 +111,19 @@ openSource = S.openSource
 openDestination :: Destination -> IO Connection 
 openDestination = S.openDestination
 
--- |Gets the next event from a buffered connection (see also `openSource`)
+-- | Gets the next event from a buffered connection (see also `openSource`)
 getNextEvent :: Connection -> IO (Maybe MidiEvent)
 getNextEvent = S.getNextEvent
 
--- |Gets all the events from the buffer (see also `openSource`)
+-- | Checks the next event from a buffered connection, but does not remove it from the buffer.
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent = S.checkNextEvent
+
+-- | Gets all the events with timestamp less than the specified from the buffer.
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil = S.getEventsUntil
+
+-- | Gets all the events from the buffer (see also `openSource`)
 getEvents :: Connection -> IO [MidiEvent]
 getEvents = S.getEvents
       
@@ -137,3 +153,20 @@ close = S.close
 currentTime :: Connection -> IO Word32
 currentTime = S.currentTime
  
+--------------------------------------------------------------------------------
+
+#ifdef darwin_HOST_OS  
+
+-- | Creates a new MIDI destination (which is a source for /us/), to which other programs can connect to.
+-- There are two possibilites to receive MIDI messages. The user can either supply a callback function,
+-- or get the messages from an asynchronous buffer. However, mixing the two approaches is not allowed.
+createDestination :: String -> Maybe ClientCallback -> IO Connection
+createDestination = S.createDestination 
+
+-- | Creates a new MIDI source (which is a destination for /us/), to which other programs can connect to.
+createSource :: String -> IO Connection
+createSource = S.createSource
+
+#endif   
+
+--------------------------------------------------------------------------------
