@@ -25,10 +25,17 @@ module System.MIDI.MacOSX
   , stop
   
   , getNextEvent
-  , getEvents
+  , checkNextEvent
+  , getEvents 
+  , getEventsUntil 
   , currentTime
   
+  , createSource
+  , createDestination
+  
   ) where
+
+--------------------------------------------------------------------------------
 
 import System.MIDI.Base
 
@@ -45,7 +52,7 @@ import System.MacOSX.CoreAudio
 import System.MacOSX.CoreMIDI hiding (ShortMessage) 
 import qualified System.MacOSX.CoreMIDI as CM
 
---------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- there are two identical ShortMessage definitions in two separate modules;
 -- these function bridges them
@@ -55,8 +62,9 @@ _to_CM_SM (ShortMessage a b c d) = CM.ShortMessage a b c d
 _from_CM_SM :: CM.ShortMessage -> ShortMessage
 _from_CM_SM (CM.ShortMessage a b c d) = ShortMessage a b c d
 
----------------
+--------------------------------------------------------------------------------
 
+{-
 -- |Gets all the events from the buffer.
 getEvents :: Connection -> IO [MidiEvent]
 getEvents conn = do
@@ -78,6 +86,59 @@ getNextEvent conn = case cn_fifo_cb conn of
       else do
         x <- readChan chan
         return (Just x)
+-}
+
+-- | Gets all the events from the buffer.
+getEvents :: Connection -> IO [MidiEvent]
+getEvents conn = do
+  m <- getNextEvent conn
+  case m of
+    Nothing -> return []
+    Just ev -> do
+      evs <- getEvents conn
+      return (ev:evs)
+
+-- | Gets all the events with timestamp less than the specified from the buffer.
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil conn until = do
+  m <- checkNextEvent conn
+  case m of
+    Nothing -> return []
+    Just ev@(MidiEvent ts _) -> do
+      if ts < until 
+        then do
+          getNextEvent conn -- remove from the buffer
+          evs <- getEventsUntil conn until
+          return (ev:evs)
+        else
+          return []
+          
+-- | Gets the next event from a buffered connection.
+getNextEvent :: Connection -> IO (Maybe MidiEvent)
+getNextEvent conn = case cn_fifo_cb conn of
+  Right _   -> fail "this is not a buffered connection"
+  Left chan -> do
+    b <- isEmptyChan chan
+    if b 
+      then return Nothing 
+      else do
+        x <- readChan chan
+        return (Just x)
+
+-- | Checks the next event from a buffered connection, but does not remove it from the buffer
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent conn = case cn_fifo_cb conn of
+  Right _   -> fail "this is not a buffered connection"
+  Left chan -> do
+    b <- isEmptyChan chan
+    if b 
+      then return Nothing 
+      else do
+        x <- readChan chan
+        unGetChan chan x
+        return (Just x)
+
+--------------------------------------------------------------------------------
 
 type Client      = MIDIClientRef
 type Device      = MIDIDeviceRef
@@ -86,6 +147,7 @@ type Port        = MIDIPortRef
 -- |The opaque data type representing a MIDI connection
 data Connection = Connection
   { cn_isInput     :: Bool
+  , cn_isNew       :: Bool            -- did we create the endpoint?
   , cn_port        :: MIDIPortRef
   , cn_endpoint    :: MIDIEndpointRef
   , cn_time        :: MVar UInt64     -- measured in nanosecs
@@ -180,7 +242,7 @@ openSource src@(Source endpoint) mcallback = do
 
   inport <- newInputPort client "Input Port" the_callback (castStablePtrToPtr sp) 
     
-  let conn = Connection True inport endpoint time alive fifo_cb the_callback sp 
+  let conn = Connection True False inport endpoint time alive fifo_cb the_callback sp 
   putMVar myData conn
   return conn 
 
@@ -193,7 +255,7 @@ openDestination dst@(Destination endpoint) = do
   alive <- newMVar True
   time  <- newEmptyMVar 
 
-  let conn = Connection False outport endpoint time alive undefined undefined undefined 
+  let conn = Connection False False outport endpoint time alive undefined undefined undefined 
   return conn 
 
 sendShortMessage :: Connection -> ShortMessage -> IO ()
@@ -218,7 +280,8 @@ start conn = do
       hosttime <- audioGetCurrentTimeInNanos
       putMVar (cn_time conn) hosttime
       case cn_isInput conn of 
-        True  -> connectToSource (cn_port conn) (Source $ cn_endpoint conn) nullPtr
+        True  -> when (not (cn_isNew conn)) $ do
+          connectToSource (cn_port conn) (Source $ cn_endpoint conn) nullPtr
         False -> return ()
     else putStrLn "warning: you shouldn't call start twice"  
 
@@ -230,7 +293,8 @@ stop conn = do
     then do
       takeMVar (cn_time conn) 
       case cn_isInput conn of 
-        True  -> disconnectFromSource (cn_port conn) (Source $ cn_endpoint conn)
+        True  -> when (not (cn_isNew conn)) $ do
+          disconnectFromSource (cn_port conn) (Source $ cn_endpoint conn)
         False -> return ()
     else putStrLn "warning: you shouldn't call stop twice"  
   
@@ -249,4 +313,44 @@ cleanup conn = case (cn_isInput conn) of
     freeHaskellFunPtr (cn_midiproc conn)
     freeStablePtr     (cn_mydata   conn)
   False -> return ()
+
+--------------------------------------------------------------------------------
+
+-- | Creates a new MIDI destination (which is a source for /us/), to which other programs can connect to.
+createDestination :: String -> Maybe ClientCallback -> IO Connection
+createDestination name mcallback = do
+  client <- getClient
+  
+  myData <- newEmptyMVar :: IO (MVar Connection)
+  sp <- newStablePtr myData 
+  the_callback <- mkMIDIReadProc myMIDIReadProc
+
+  time  <- newEmptyMVar 
+  alive <- newMVar True
+
+  fifo_cb <- case mcallback of
+    Just cb -> return $ Right cb
+    Nothing -> liftM Left $ newChan 
+
+  Source endpoint <- newDestination client name the_callback (castStablePtrToPtr sp) 
+    
+  let inport = error "createDestination/inport"
+      conn = Connection True True inport endpoint time alive fifo_cb the_callback sp 
+  putMVar myData conn
+  return conn 
+
+
+-- | Creates a new MIDI source (which is a destination for /us/), to which other programs can connect to.
+createSource :: String -> IO Connection
+createSource name = do
+  client <- getClient
+  Destination endpoint <- newSource client name
+  
+  outport <- newOutputPort client "Output Port" 
+  alive <- newMVar True
+  time  <- newEmptyMVar 
+
+  let conn = Connection False True outport endpoint time alive undefined undefined undefined 
+  return conn 
+
 
