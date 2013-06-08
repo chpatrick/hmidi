@@ -159,7 +159,7 @@ message = do
       msg <- message' hi lo
       return $ Right msg
   
-message' 8  chn = do { k <- int8 ; v <- int8 ; return $ MidiMessage (chn+1) $ NoteOff k          }  
+message' 8  chn = do { k <- int8 ; v <- int8 ; return $ MidiMessage (chn+1) $ NoteOff k v        }  
 message' 9  chn = do { k <- int8 ; v <- int8 ; return $ MidiMessage (chn+1) $ NoteOn  k v        }  
 message' 10 chn = do { k <- int8 ; v <- int8 ; return $ MidiMessage (chn+1) $ PolyAftertouch k v }  
 message' 11 chn = do { k <- int8 ; v <- int8 ; return $ MidiMessage (chn+1) $ CC k v             }  

@@ -89,9 +89,8 @@ select devlist = do
       putStrLn "please select a midi device"
       l <- getLine
       let k = case maybeRead l of
-        { Nothing -> 1
-        ; Just m  -> if m<1 || m>ndev then 1 else m
-        }
+                Nothing -> 1
+                Just m  -> if m<1 || m>ndev then 1 else m
       putStrLn $ "device #" ++ show k ++ " selected."
       return $ devlist!!(k-1)
   return dev

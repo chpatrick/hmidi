@@ -37,9 +37,8 @@ select srclist = do
       putStrLn "please select a midi device"
       l <- getLine
       let k = case maybeRead l of
-        { Nothing -> nsrc
-        ; Just m  -> if m<1 || m>nsrc then nsrc else m
-        }
+                Nothing -> nsrc
+                Just m  -> if m<1 || m>nsrc then nsrc else m
       putStrLn $ "device #" ++ show k ++ " selected."
       return $ srclist!!(k-1)
   return src

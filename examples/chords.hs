@@ -18,7 +18,7 @@ output_channel = 1
 
 mycallback outconn event@(MidiEvent _ (MidiMessage chn msg)) = do
   case msg of
-    NoteOff k   -> forM_ chord $ \j -> send outconn $ MidiMessage output_channel $ NoteOff (k+j)
+    NoteOff k v -> forM_ chord $ \j -> send outconn $ MidiMessage output_channel $ NoteOff (k+j) v
     NoteOn  k v -> forM_ chord $ \j -> send outconn $ MidiMessage output_channel $ NoteOn  (k+j) v
     _           -> return () 
 mycallback _ _ = return ()
@@ -41,9 +41,8 @@ select srclist = do
       putStrLn "please select a midi device"
       l <- getLine
       let k = case maybeRead l of
-        { Nothing -> nsrc
-        ; Just m  -> if m<1 || m>nsrc then nsrc else m
-        }
+                Nothing -> nsrc
+                Just m  -> if m<1 || m>nsrc then nsrc else m
       putStrLn $ "device #" ++ show k ++ " selected."
       return $ srclist!!(k-1)
   return src
