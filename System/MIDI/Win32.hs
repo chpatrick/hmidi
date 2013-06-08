@@ -25,7 +25,9 @@ module System.MIDI.Win32
   , stop
   
   , getNextEvent
-  , getEvents  
+  , checkNextEvent
+  , getEvents 
+  , getEventsUntil 
   , currentTime
   ) where
 
@@ -42,7 +44,9 @@ import System.Win32.MIDI
 
 import System.MIDI.Base
 
--- |Gets all the events from the buffer.
+--------------------------------------------------------------------------------
+
+-- | Gets all the events from the buffer.
 getEvents :: Connection -> IO [MidiEvent]
 getEvents conn = do
   m <- getNextEvent conn
@@ -51,8 +55,23 @@ getEvents conn = do
     Just ev -> do
       evs <- getEvents conn
       return (ev:evs)
-      
--- |Gets the next event from a buffered connection.
+
+-- | Gets all the events with timestamp less than the specified from the buffer.
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil conn until = do
+  m <- checkNextEvent conn
+  case m of
+    Nothing -> return []
+    Just ev@(MidiEvent ts _) -> do
+      if ts < until 
+        then do
+          getNextEvent conn -- remove from the buffer
+          evs <- getEventsUntil conn until
+          return (ev:evs)
+        else
+          return []
+     
+-- | Gets the next event from a buffered connection.
 getNextEvent :: Connection -> IO (Maybe MidiEvent)
 getNextEvent conn = case cn_fifo_cb conn of
   Right _   -> fail "this is not a buffered connection"
@@ -63,6 +82,22 @@ getNextEvent conn = case cn_fifo_cb conn of
       else do
         x <- readChan chan
         return (Just x)
+
+-- | Checks the next event from a buffered connection, but does not remove it from the buffer
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent conn = case cn_fifo_cb conn of
+  Right _   -> fail "this is not a buffered connection"
+  Left chan -> do
+    b <- isEmptyChan chan
+    if b 
+      then return Nothing 
+      else do
+        x <- readChan chan
+        unGetChan chan x
+        return (Just x)
+
+--------------------------------------------------------------------------------
+
 
 waitFor :: IO Bool -> IO ()
 waitFor check = do
