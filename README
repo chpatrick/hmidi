@@ -2,14 +2,19 @@
 Installation & Usage
 --------------------
 
-It should install without problems on Mac OS X Tiger and Windows XP; 
-not tested under Leopard or Vista. As usual, run the commands:
+It should install without problems on Mac OS X and Windows. 
+
+As usual, just run the command:
+
+cabal install 
+
+or if you are very oldschool:
 
 runghc Setup.lhs configure
 runghc Setup.lhs build
 runghc Setup.lhs install
 
-When using the library, you have to link against the threaded runtime:
+When using the library, you *have* to link against the threaded runtime:
 
 ghc --make -threaded -O monitor.hs
 
