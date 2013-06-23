@@ -17,7 +17,7 @@ Homepage:            http://code.haskell.org/~bkomuves/
 Stability:           Experimental
 Category:            Sound, System
 Tested-With:         GHC == 7.4.2
-Cabal-Version:       >= 1.2
+Cabal-Version:       >= 1.6
 Build-Type:          Simple
 
 extra-source-files:  examples/monitor.hs, 
