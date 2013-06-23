@@ -8,9 +8,14 @@
 
 module Main where
 
-import Control.Monad
-import System.MIDI
+--------------------------------------------------------------------------------
 
+import Control.Monad
+
+import System.MIDI
+import System.MIDI.Utility
+
+--------------------------------------------------------------------------------
 -- the essence
 
 chord = [0,4,7]
@@ -22,43 +27,15 @@ mycallback outconn event@(MidiEvent _ (MidiMessage chn msg)) = do
     NoteOn  k v -> forM_ chord $ \j -> send outconn $ MidiMessage output_channel $ NoteOn  (k+j) v
     _           -> return () 
 mycallback _ _ = return ()
-
--- source / destination selection
-
-maybeRead :: Read a => String -> Maybe a
-maybeRead s = case reads s of 
-  [(x,"")] -> Just x
-  _        -> Nothing
-  
-select srclist = do
-  names <- mapM getName srclist
-  forM_ (zip [1..] names) $ \(i,name) -> putStrLn $ show i ++ ": " ++ name
-  let nsrc = length srclist
-  src <- case srclist of
-    []  -> fail "no midi devices found"
-    [x] -> return x
-    _   -> do
-      putStrLn "please select a midi device"
-      l <- getLine
-      let k = case maybeRead l of
-                Nothing -> nsrc
-                Just m  -> if m<1 || m>nsrc then nsrc else m
-      putStrLn $ "device #" ++ show k ++ " selected."
-      return $ srclist!!(k-1)
-  return src
       
+--------------------------------------------------------------------------------
 -- main      
       
 main = do
 
-  srclist <- enumerateSources
-  putStrLn "midi sources:"
-  src <- select srclist
-
-  dstlist <- enumerateDestinations
-  putStrLn "\nmidi destinations:"
-  dst <- select dstlist
-
+  src <- selectInputDevice Nothing
+  dst <- selectOutputDevice Nothing
+  
   outconn <- openDestination dst
   inconn  <- openSource src $ Just (mycallback outconn)
   putStrLn "connected"

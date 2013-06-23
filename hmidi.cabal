@@ -43,7 +43,9 @@ Library
   else
     Build-Depends: base <  3
 
-  Exposed-Modules:     System.MIDI.Base, System.MIDI
+  Exposed-Modules:     System.MIDI.Base, 
+                       System.MIDI, 
+                       System.MIDI.Utility
 
   if os(darwin)
     Frameworks:          CoreFoundation, CoreAudio, CoreMIDI
@@ -68,6 +70,4 @@ Library
 
   if flag(noNoteOff)
     cpp-options:         -DHMIDI_NO_NOTEOFF 
-
-
 

@@ -1,5 +1,5 @@
   
--- |Part of the General MIDI specs.  
+-- | Part of the General MIDI specs.  
   
 module GM 
   ( gmInstrumentByNumber
@@ -14,7 +14,11 @@ module GM
   
   ) where
 
+--------------------------------------------------------------------------------
+
 import qualified Data.Map as Map
+
+--------------------------------------------------------------------------------
 
 swap :: (a,b) -> (b,a)
 swap (x,y) = (y,x)
@@ -252,4 +256,8 @@ gm1ControllerList =
   , ( 121 , "Reset all controllers" )
   , ( 123 , "All notes off" )
   ]
+
+--------------------------------------------------------------------------------
+
+  
   

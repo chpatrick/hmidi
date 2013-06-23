@@ -3,6 +3,7 @@
 -- Implemented as a quick-and-dirty (and ugly) Parsec parser on strings, because 
 -- I'm lazy and efficiency is (hopefully) not that important in this case.
 
+{-# LANGUAGE PackageImports #-}
 module SMF
   ( module System.MIDI.Base
   , MidiEvent'(..)
@@ -14,18 +15,22 @@ module SMF
   , timestampUnitInMilisecs
   ) where
 
+--------------------------------------------------------------------------------
+
 import Data.Bits
 import Data.Char
 import Data.Int
 import Data.Word
 
 import Control.Monad
-import Text.ParserCombinators.Parsec hiding (Parser)
 import System.IO
+
+import "parsec2" Text.ParserCombinators.Parsec hiding (Parser)
 
 import System.MIDI.Base
 
------ Types
+--------------------------------------------------------------------------------
+-- Types
 
 -- |SMF meta events
 data MetaEvent 
@@ -83,12 +88,13 @@ loadSMF fpath = do
   hClose h  -- hGetContents is lazy, so we should close the file before doing the parsing...
   return y
    
--- |Timestamps in the resulting list of `MidiEvent'`-s are in the SMF units, so most 
+-- | Timestamps in the resulting list of `MidiEvent'`-s are in the SMF units, so most 
 -- probably you have to convert them, using `timestampUnitInMilisecs`.  
 parseSMF :: [Char] -> Either ParseError ((Int,TimeBase),[Track])   
 parseSMF txt = runParser smf 0 "" txt
 
------ Parsec parser
+--------------------------------------------------------------------------------
+-- Parsec parser
 
 smf = do
   (typ,trk,div) <- header
@@ -287,4 +293,6 @@ bigendian' m l = do
   d <- int8
   bigendian' (d + shiftL m 8) (l-1)
   
+--------------------------------------------------------------------------------
+
     

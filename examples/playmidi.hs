@@ -1,10 +1,11 @@
 
---
--- A simplified MID file player, as an example application using System.MIDI.
+-- | A simplified MID file player, as an example application using System.MIDI.
 -- You will need a GM (General MIDI) capable synth, or something like that (Windows has one built-in).
 --
 
 module Main where
+
+--------------------------------------------------------------------------------
 
 import Data.Ord
 import Data.List
@@ -15,7 +16,10 @@ import System.Environment
 import System.Exit
 
 import System.MIDI
+import System.MIDI.Utility
 import SMF
+
+--------------------------------------------------------------------------------
 
 -- player thread
 
@@ -71,31 +75,7 @@ toSong division tracks = Song bpm $ map convert midi where
   meta = map (filterMap tmeta) tracks
   midi = map (filterMap tmidi) tracks
 
--- source / destination selection
-
-maybeRead :: Read a => String -> Maybe a
-maybeRead s = case reads s of 
-  [(x,"")] -> Just x
-  _        -> Nothing
-  
-select devlist = do
-  names <- mapM getName devlist
-  forM_ (zip [1..] names) $ \(i,name) -> putStrLn $ show i ++ ": " ++ name
-  let ndev = length devlist
-  dev <- case devlist of
-    []  -> fail "no midi devices found"
-    [x] -> return x
-    _   -> do
-      putStrLn "please select a midi device"
-      l <- getLine
-      let k = case maybeRead l of
-                Nothing -> 1
-                Just m  -> if m<1 || m>ndev then 1 else m
-      putStrLn $ "device #" ++ show k ++ " selected."
-      return $ devlist!!(k-1)
-  return dev
-
--- main
+--------------------------------------------------------------------------------
 
 main = do
   args <- getArgs
@@ -112,8 +92,7 @@ main = do
   let events = sortBy (comparing $ \(MidiEvent t _) -> t) $ concat (song_tracks song)
   mv <- newMVar events
   
-  dstlist <- enumerateDestinations
-  dst <- select dstlist
+  dst <- selectOutputDevice Nothing
     
   conn <- openDestination dst
   start conn

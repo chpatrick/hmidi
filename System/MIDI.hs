@@ -24,6 +24,7 @@ module System.MIDI
   , enumerateSources
   , enumerateDestinations
   
+  , S.MIDIHasName 
   , getName
   , getModel
   , getManufacturer
