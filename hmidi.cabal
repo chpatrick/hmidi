@@ -45,6 +45,7 @@ Library
 
   Exposed-Modules:     System.MIDI.Base, 
                        System.MIDI, 
+                       System.MIDI.Sync,
                        System.MIDI.Utility
 
   if os(darwin)
