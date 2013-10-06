@@ -28,6 +28,12 @@ module System.MIDI.MacOSX
   , checkNextEvent
   , getEvents 
   , getEventsUntil 
+
+  , getNextEvent'
+  , checkNextEvent'
+  , getEvents'
+  , getEventsUntil' 
+  
   , currentTime
   
   , createSource
@@ -41,7 +47,11 @@ import System.MIDI.Base
 
 import Control.Monad
 import Control.Concurrent.MVar
-import Control.Concurrent.Chan
+--import Control.Concurrent.Chan
+
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TChan
+
 import Data.List
 import Foreign
 import Foreign.StablePtr
@@ -64,78 +74,68 @@ _from_CM_SM (CM.ShortMessage a b c d) = ShortMessage a b c d
 
 --------------------------------------------------------------------------------
 
-{-
--- |Gets all the events from the buffer.
 getEvents :: Connection -> IO [MidiEvent]
-getEvents conn = do
-  m <- getNextEvent conn
-  case m of
-    Nothing -> return []
-    Just ev -> do
-      evs <- getEvents conn
-      return (ev:evs)
-      
--- |Gets the next event from a buffered connection.
+getEvents conn = atomically $ getEvents' conn
+
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil conn tstamp = atomically $ getEventsUntil' conn tstamp
+
 getNextEvent :: Connection -> IO (Maybe MidiEvent)
-getNextEvent conn = case cn_fifo_cb conn of
-  Right _   -> fail "this is not a buffered connection"
-  Left chan -> do
-    b <- isEmptyChan chan
-    if b 
-      then return Nothing 
-      else do
-        x <- readChan chan
-        return (Just x)
--}
+getNextEvent conn = atomically $ getNextEvent' conn
+
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent conn = atomically $ checkNextEvent' conn
+
+--------------------------------------------------------------------------------
 
 -- | Gets all the events from the buffer.
-getEvents :: Connection -> IO [MidiEvent]
-getEvents conn = do
-  m <- getNextEvent conn
+getEvents' :: Connection -> STM [MidiEvent]
+getEvents' conn = do
+  m <- getNextEvent' conn
   case m of
     Nothing -> return []
     Just ev -> do
-      evs <- getEvents conn
+      evs <- getEvents' conn
       return (ev:evs)
 
 -- | Gets all the events with timestamp less than the specified from the buffer.
-getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
-getEventsUntil conn until = do
-  m <- checkNextEvent conn
+getEventsUntil' :: Connection -> TimeStamp -> STM [MidiEvent]
+getEventsUntil' conn until = do
+  m <- checkNextEvent' conn
   case m of
     Nothing -> return []
     Just ev@(MidiEvent ts _) -> do
       if ts < until 
         then do
-          getNextEvent conn -- remove from the buffer
-          evs <- getEventsUntil conn until
+          getNextEvent' conn -- remove from the buffer
+          evs <- getEventsUntil' conn until
           return (ev:evs)
         else
           return []
           
 -- | Gets the next event from a buffered connection.
-getNextEvent :: Connection -> IO (Maybe MidiEvent)
-getNextEvent conn = case cn_fifo_cb conn of
+getNextEvent' :: Connection -> STM (Maybe MidiEvent)
+getNextEvent' conn = case cn_fifo_cb conn of
   Right _   -> fail "this is not a buffered connection"
   Left chan -> do
-    b <- isEmptyChan chan
+    b <- isEmptyTChan chan
     if b 
       then return Nothing 
       else do
-        x <- readChan chan
+        x <- readTChan chan
         return (Just x)
 
 -- | Checks the next event from a buffered connection, but does not remove it from the buffer
-checkNextEvent :: Connection -> IO (Maybe MidiEvent)
-checkNextEvent conn = case cn_fifo_cb conn of
+checkNextEvent' :: Connection -> STM (Maybe MidiEvent)
+checkNextEvent' conn = case cn_fifo_cb conn of
   Right _   -> fail "this is not a buffered connection"
   Left chan -> do
-    b <- isEmptyChan chan
+    b <- isEmptyTChan chan
     if b 
       then return Nothing 
       else do
-        x <- readChan chan
-        unGetChan chan x
+        x <- readTChan chan
+        unGetTChan chan x
         return (Just x)
 
 --------------------------------------------------------------------------------
@@ -152,13 +152,14 @@ data Connection = Connection
   , cn_endpoint    :: MIDIEndpointRef
   , cn_time        :: MVar UInt64     -- measured in nanosecs
   , cn_alive       :: MVar Bool
-  , cn_fifo_cb     :: Either (Chan MidiEvent) ClientCallback
+  , cn_fifo_cb     :: Either (TChan MidiEvent) ClientCallback
   , cn_midiproc    :: FunPtr (MIDIReadProc () ())
   , cn_mydata      :: StablePtr (MVar Connection)
   }
 
 ----- automatic client creation 
 
+client :: MVar Client
 client = Unsafe.unsafePerformIO $ newEmptyMVar :: MVar Client
 
 {-
@@ -217,7 +218,7 @@ myMIDIReadProc packets myptr _  = do
       normals <- mapM (convertShortMessage time0) normal
       let events = sysexs ++ normals
       case (cn_fifo_cb conn) of
-        Left  chan -> writeList2Chan chan events 
+        Left  chan -> atomically $ mapM_ (writeTChan chan) events -- writeList2Chan chan events 
         Right call -> mapM_ call events 
       putMVar mv conn      -- do not forget to put it back!
 
@@ -238,7 +239,7 @@ openSource src@(Source endpoint) mcallback = do
 
   fifo_cb <- case mcallback of
     Just cb -> return $ Right cb
-    Nothing -> liftM Left $ newChan 
+    Nothing -> liftM Left $ newTChanIO 
 
   inport <- newInputPort client "Input Port" the_callback (castStablePtrToPtr sp) 
     
@@ -330,7 +331,7 @@ createDestination name mcallback = do
 
   fifo_cb <- case mcallback of
     Just cb -> return $ Right cb
-    Nothing -> liftM Left $ newChan 
+    Nothing -> liftM Left $ newTChanIO 
 
   Source endpoint <- newDestination client name the_callback (castStablePtrToPtr sp) 
     

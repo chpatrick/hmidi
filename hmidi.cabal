@@ -1,6 +1,6 @@
 
 Name:                hmidi
-Version:             0.2.0.0
+Version:             0.2.1.0
 Synopsis:            Binding to the OS level MIDI services
 Description:         Partial implementation of the MIDI 1.0 standard to communicate 
                      with physical or virtual MIDI devices, eg. MIDI keyboards. 
@@ -43,6 +43,8 @@ Library
   else
     Build-Depends: base <  3
 
+  Build-depends:       stm
+  
   Exposed-Modules:     System.MIDI.Base, 
                        System.MIDI, 
                        System.MIDI.Sync,

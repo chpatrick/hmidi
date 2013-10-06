@@ -14,10 +14,14 @@ module System.MIDI.Base
   , shortMessage
   ) where
 
+--------------------------------------------------------------------------------
+
 import Data.Bits
 import Data.Word
 
 type TimeStamp = Word32 
+
+--------------------------------------------------------------------------------
 
 -- |A \"regular\" MIDI message.
 --

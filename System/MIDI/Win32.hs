@@ -1,4 +1,4 @@
-
+wr
 -- |A lowest common denominator interface to the Win32 and MacOSX MIDI bindings, Win32 part. 
 
 module System.MIDI.Win32 
@@ -28,12 +28,25 @@ module System.MIDI.Win32
   , checkNextEvent
   , getEvents 
   , getEventsUntil 
+
+  , getNextEvent'
+  , checkNextEvent'
+  , getEvents'
+  , getEventsUntil' 
+
   , currentTime
+
   ) where
+
+--------------------------------------------------------------------------------
 
 import Control.Monad
 import Control.Concurrent.MVar
-import Control.Concurrent.Chan
+--import Control.Concurrent.Chan
+
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TChan
+
 import Data.List
 import Foreign
 import Foreign.StablePtr
@@ -46,58 +59,72 @@ import System.MIDI.Base
 
 --------------------------------------------------------------------------------
 
--- | Gets all the events from the buffer.
+
 getEvents :: Connection -> IO [MidiEvent]
-getEvents conn = do
-  m <- getNextEvent conn
+getEvents conn = atomically $ getEvents' conn
+
+getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
+getEventsUntil conn tstamp = atomically $ getEventsUntil' conn tstamp
+
+getNextEvent :: Connection -> IO (Maybe MidiEvent)
+getNextEvent conn = atomically $ getNextEvent' conn
+
+checkNextEvent :: Connection -> IO (Maybe MidiEvent)
+checkNextEvent conn = atomically $ checkNextEvent' conn
+
+--------------------------------------------------------------------------------
+
+-- | Gets all the events from the buffer.
+getEvents' :: Connection -> STM [MidiEvent]
+getEvents' conn = do
+  m <- getNextEvent' conn
   case m of
     Nothing -> return []
     Just ev -> do
-      evs <- getEvents conn
+      evs <- getEvents' conn
       return (ev:evs)
 
 -- | Gets all the events with timestamp less than the specified from the buffer.
-getEventsUntil :: Connection -> TimeStamp -> IO [MidiEvent]
-getEventsUntil conn until = do
-  m <- checkNextEvent conn
+getEventsUntil' :: Connection -> TimeStamp -> STM [MidiEvent]
+getEventsUntil' conn until = do
+  m <- checkNextEvent' conn
   case m of
     Nothing -> return []
     Just ev@(MidiEvent ts _) -> do
       if ts < until 
         then do
-          getNextEvent conn -- remove from the buffer
-          evs <- getEventsUntil conn until
+          getNextEvent' conn -- remove from the buffer
+          evs <- getEventsUntil' conn until
           return (ev:evs)
         else
           return []
-     
+          
 -- | Gets the next event from a buffered connection.
-getNextEvent :: Connection -> IO (Maybe MidiEvent)
-getNextEvent conn = case cn_fifo_cb conn of
+getNextEvent' :: Connection -> STM (Maybe MidiEvent)
+getNextEvent' conn = case cn_fifo_cb conn of
   Right _   -> fail "this is not a buffered connection"
   Left chan -> do
-    b <- isEmptyChan chan
+    b <- isEmptyTChan chan
     if b 
       then return Nothing 
       else do
-        x <- readChan chan
+        x <- readTChan chan
         return (Just x)
 
 -- | Checks the next event from a buffered connection, but does not remove it from the buffer
-checkNextEvent :: Connection -> IO (Maybe MidiEvent)
-checkNextEvent conn = case cn_fifo_cb conn of
+checkNextEvent' :: Connection -> STM (Maybe MidiEvent)
+checkNextEvent' conn = case cn_fifo_cb conn of
   Right _   -> fail "this is not a buffered connection"
   Left chan -> do
-    b <- isEmptyChan chan
+    b <- isEmptyTChan chan
     if b 
       then return Nothing 
       else do
-        x <- readChan chan
-        unGetChan chan x
+        x <- readTChan chan
+        unGetTChan chan x
         return (Just x)
 
 --------------------------------------------------------------------------------
-
 
 waitFor :: IO Bool -> IO ()
 waitFor check = do
@@ -109,7 +136,7 @@ data Connection = Connection
   { cn_isInput    :: Bool
   , cn_handle     :: HMIDI
   , cn_time       :: MVar Word32  -- measured in milisecs  
-  , cn_fifo_cb    :: Either (Chan MidiEvent) ClientCallback
+  , cn_fifo_cb    :: Either (TChan MidiEvent) ClientCallback
   , cn_midiproc   :: FunPtr (MIDIINPROC ())
   , cn_mydata     :: StablePtr (MVar Connection)
   , cn_inbuf      :: MVar (Ptr MIDIHDR)
@@ -174,30 +201,33 @@ myMidiCallback hmidi msg' myptr param1 param2 = do
       when (msg /= MIM_CLOSE) $ putMVar mv conn      -- do not forget !!!
   
 -- I'm not sure, but getChanContents seems to be too lazy for our purposes  
-readChanList :: Chan a -> IO [a]
-readChanList chan = do
-  b <- isEmptyChan chan  
+readTChanList' :: TChan a -> STM [a]
+readTChanList' chan = do
+  b <- isEmptyTChan chan  
   if b 
     then return []
     else do
-      x <- readChan chan
-      xs <- readChanList chan
+      x <- readTChan chan
+      xs <- readTChanList chan
       return (x:xs)
 
+processSysEx :: TChan Word8 -> [Word8] -> IO [[Word8]]
+processSysEx chan dat = atomically $ processSysEx' chan dat 
+
 -- the Win32 SysEx support is somewhat brain-dead...
-processSysEx :: Chan Word8 -> [Word8] -> IO [[Word8]]
-processSysEx _    []  = return []
-processSysEx chan dat = do
+processSysEx' :: TChan Word8 -> [Word8] -> STM [[Word8]]
+processSysEx' _    []  = return []
+processSysEx' chan dat = do
   case (findIndex (==0xf7) dat) of
     Nothing -> do
-      writeList2Chan chan dat
+      atomically $ mapM_ (writeTChan chan) dat -- writeList2Chan chan dat
       return []          
     Just k  -> do
-      xs <- readChanList chan  
+      xs <- readTChanList' chan  
       let (aa,bb) = splitAt k dat
           ys = xs ++ aa
           ev = if (head ys == 0xf0) then tail ys else ys 
-      evs <- processSysEx chan (tail bb)
+      evs <- processSysEx' chan (tail bb)
       return (ev:evs)
   
 midiInBufferSize = 64
@@ -213,11 +243,11 @@ openSource src mcallback = do
   alive <- newMVar True
   fifo_cb <- case mcallback of
     Just cb -> return $ Right cb
-    Nothing -> liftM Left $ newChan 
+    Nothing -> liftM Left $ newTChanIO 
   time <- newEmptyMVar 
   handle <- midiInOpen src the_callback (castStablePtrToPtr sp) (CALLBACK_FUNCTION False)
   bufmv <- newEmptyMVar 
-  sysex <- newChan   -- channel for temporarily storing sysex messages (they can be arbritrary long, but the buffer has fixed size)
+  sysex <- newTChanIO  -- channel for temporarily storing sysex messages (they can be arbritrary long, but the buffer has fixed size)
   let conn = Connection True handle time fifo_cb the_callback sp bufmv sysex alive 
   putMVar myData conn
   return conn 
