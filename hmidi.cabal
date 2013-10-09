@@ -30,20 +30,12 @@ source-repository head
   type:     darcs
   location: http://code.haskell.org/~bkomuves/projects/hmidi/
 
-Flag splitBase
-  Description: Choose the new smaller, split-up base package.
-
 Flag noNoteOff
   Description:         Translates NoteOff events to NoteOn events with velocity=0.
   Default:             False
 
 Library
-  if flag(splitBase)
-    Build-Depends: base >= 3 && < 5
-  else
-    Build-Depends: base <  3
-
-  Build-depends:       stm
+  Build-depends:       base >= 3, stm
   
   Exposed-Modules:     System.MIDI.Base, 
                        System.MIDI, 

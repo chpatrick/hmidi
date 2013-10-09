@@ -1,17 +1,20 @@
 
 --
 -- Module      : System.MIDI
--- Version     : 0.2
+-- Version     : 0.2.1
 -- License     : BSD3
 -- Author      : Balazs Komuves
 -- Maintainer  : bkomuves (plus) hackage (at) gmail (dot) com
 -- Stability   : experimental
 -- Portability : not portable
--- Tested with : GHC 6.8.3
+-- Tested with : GHC 7.4.2
 --
 
--- |A lowest common denominator interface to the Win32 and MacOSX MIDI bindings. 
--- Error handling is via `fail`-s in the IO monad. 
+-- | A lowest common denominator interface to the Win32 and MacOSX MIDI bindings. 
+-- Error handling is via `fail`-s in the IO monad. .
+--
+-- Always link with the threaded runtime! (use the -threaded GHC option)
+--
 
 {-# LANGUAGE CPP #-}
 module System.MIDI 
