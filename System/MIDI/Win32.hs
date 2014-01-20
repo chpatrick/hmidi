@@ -1,4 +1,4 @@
-wr
+
 -- |A lowest common denominator interface to the Win32 and MacOSX MIDI bindings, Win32 part. 
 
 module System.MIDI.Win32 
@@ -42,7 +42,8 @@ module System.MIDI.Win32
 
 import Control.Monad
 import Control.Concurrent.MVar
---import Control.Concurrent.Chan
+
+--import Control.Concurrent.Chan  -- for sysex only
 
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TChan
@@ -140,7 +141,7 @@ data Connection = Connection
   , cn_midiproc   :: FunPtr (MIDIINPROC ())
   , cn_mydata     :: StablePtr (MVar Connection)
   , cn_inbuf      :: MVar (Ptr MIDIHDR)
-  , cn_sysex      :: Chan Word8   -- channel for temporarily storing sysex messages (they can be arbritrary long, but the buffer has fixed size)
+  , cn_sysex      :: TChan Word8   -- channel for temporarily storing sysex messages (they can be arbritrary long, but the buffer has fixed size)
   , cn_alive      :: MVar Bool
   } 
 
@@ -166,7 +167,7 @@ myMidiCallback hmidi msg' myptr param1 param2 = do
           let tmsg  = translateShortMessage $ decodeShortMessage param1
           let event = MidiEvent param2 tmsg
           case (cn_fifo_cb conn) of
-            Left  chan -> writeChan chan event 
+            Left  chan -> atomically $ writeTChan chan event 
             Right call -> call event 
 
         MIM_LONGDATA -> do
@@ -179,7 +180,7 @@ myMidiCallback hmidi msg' myptr param1 param2 = do
           forM_ sysexs $ \dat -> do
             let event = MidiEvent param2 (SysEx dat)          
             case (cn_fifo_cb conn) of
-              Left  chan -> writeChan chan event 
+              Left  chan -> atomically $ writeTChan chan event 
               Right call -> call event 
           
           -- reportedly we are not supposed to call midiInAddBuffer and the like from here, 
@@ -208,7 +209,7 @@ readTChanList' chan = do
     then return []
     else do
       x <- readTChan chan
-      xs <- readTChanList chan
+      xs <- readTChanList' chan
       return (x:xs)
 
 processSysEx :: TChan Word8 -> [Word8] -> IO [[Word8]]
@@ -220,7 +221,7 @@ processSysEx' _    []  = return []
 processSysEx' chan dat = do
   case (findIndex (==0xf7) dat) of
     Nothing -> do
-      atomically $ mapM_ (writeTChan chan) dat -- writeList2Chan chan dat
+      mapM_ (writeTChan chan) dat -- writeList2Chan chan dat
       return []          
     Just k  -> do
       xs <- readTChanList' chan  

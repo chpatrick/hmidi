@@ -35,7 +35,7 @@ Flag noNoteOff
   Default:             False
 
 Library
-  Build-depends:       base >= 3, stm
+  Build-depends:       base >= 3 && <= 5, stm
   
   Exposed-Modules:     System.MIDI.Base, 
                        System.MIDI, 
