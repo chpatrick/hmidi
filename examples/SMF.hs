@@ -25,7 +25,7 @@ import Data.Word
 import Control.Monad
 import System.IO
 
-import "parsec2" Text.ParserCombinators.Parsec hiding (Parser)
+import Text.ParserCombinators.Parsec hiding (Parser)
 
 import System.MIDI.Base
 

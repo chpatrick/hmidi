@@ -33,8 +33,8 @@ mycallback _ _ = return ()
       
 main = do
 
-  src <- selectInputDevice Nothing
-  dst <- selectOutputDevice Nothing
+  src <- selectInputDevice "Select midi input device" Nothing
+  dst <- selectOutputDevice "Select midi output device" Nothing
   
   outconn <- openDestination dst
   inconn  <- openSource src $ Just (mycallback outconn)

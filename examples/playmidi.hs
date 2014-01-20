@@ -92,7 +92,7 @@ main = do
   let events = sortBy (comparing $ \(MidiEvent t _) -> t) $ concat (song_tracks song)
   mv <- newMVar events
   
-  dst <- selectOutputDevice Nothing
+  dst <- selectOutputDevice "Select midi output device" Nothing
     
   conn <- openDestination dst
   start conn

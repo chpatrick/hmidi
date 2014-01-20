@@ -28,7 +28,7 @@ mythread conn = do
       
 main = do
 
-  src <- selectInputDevice Nothing
+  src <- selectInputDevice "Select midi input device" Nothing
 
   conn <- openSource src Nothing
   putStrLn "connected"
