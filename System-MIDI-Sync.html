@@ -1,0 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>System.MIDI.Sync</title><link href="ocean.css" rel="stylesheet" type="text/css" title="Ocean" /><script src="haddock-util.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
+window.onload = function () {pageLoad();setSynopsis("mini_System-MIDI-Sync.html");};
+//]]>
+</script></head><body><div id="package-header"><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul><p class="caption">hmidi-0.2.1.0: Binding to the OS level MIDI services</p></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr></table><p class="caption">System.MIDI.Sync</p></div><div id="description"><p class="caption">Description</p><div class="doc"><p>MIDI sync to an external clock source.
+</p><p>To avoid confusion:
+ In our terminology, <em>beat</em> means a quarter note (the same thing as the B in BPM).
+ In MIDI terminology however, a &quot;MIDI beat&quot; means a sixteenth note.
+</p><p>With our notion of beats, one bar is 4 beats (in 4/4 signature, that is)
+</p></div></div><div id="synopsis"><p id="control.syn" class="caption expander" onclick="toggleSection('syn')">Synopsis</p><ul id="section.syn" class="hide" onclick="toggleSection('syn')"><li class="src short"><span class="keyword">type</span> <a href="#t:Beats">Beats</a> = <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Prelude.html#t:Double">Double</a></li><li class="src short"><span class="keyword">type</span> <a href="#t:BPM">BPM</a> = <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Prelude.html#t:Double">Double</a></li><li class="src short"><a href="#v:openSourceWithSync">openSourceWithSync</a> :: <a href="System-MIDI.html#t:Source">Source</a> -&gt; (<a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Data-Maybe.html#t:Maybe">Maybe</a> <a href="System-MIDI-Sync.html#t:Beats">Beats</a> -&gt; <a href="System-MIDI-Base.html#t:MidiEvent">MidiEvent</a> -&gt; <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> ()) -&gt; <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> (<a href="System-MIDI.html#t:Connection">Connection</a>, <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> (<a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Data-Maybe.html#t:Maybe">Maybe</a> <a href="System-MIDI-Sync.html#t:Beats">Beats</a>), <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> <a href="System-MIDI-Sync.html#t:BPM">BPM</a>)</li></ul></div><div id="interface"><h1>Documentation</h1><div class="top"><p class="src"><span class="keyword">type</span> <a name="t:Beats" class="def">Beats</a> = <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Prelude.html#t:Double">Double</a></p><div class="doc"><p>Song position measured in beats (that is, quarter notes), starting from zero.
+ So with 120 BPM, you will have song position 120 after one minute.
+</p></div></div><div class="top"><p class="src"><span class="keyword">type</span> <a name="t:BPM" class="def">BPM</a> = <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Prelude.html#t:Double">Double</a></p><div class="doc"><p>Estimated BPM
+</p></div></div><div class="top"><p class="src"><a name="v:openSourceWithSync" class="def">openSourceWithSync</a></p><div class="subs arguments"><p class="caption">Arguments</p><table><tr><td class="src">:: <a href="System-MIDI.html#t:Source">Source</a></td><td class="doc"><p>midi source
+</p></td></tr><tr><td class="src">-&gt; (<a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Data-Maybe.html#t:Maybe">Maybe</a> <a href="System-MIDI-Sync.html#t:Beats">Beats</a> -&gt; <a href="System-MIDI-Base.html#t:MidiEvent">MidiEvent</a> -&gt; <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> ())</td><td class="doc"><p>user callback
+</p></td></tr><tr><td class="src">-&gt; <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> (<a href="System-MIDI.html#t:Connection">Connection</a>, <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> (<a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/Data-Maybe.html#t:Maybe">Maybe</a> <a href="System-MIDI-Sync.html#t:Beats">Beats</a>), <a href="/usr/share/doc/ghc-doc/html/libraries/base-4.6.0.1/System-IO.html#t:IO">IO</a> <a href="System-MIDI-Sync.html#t:BPM">BPM</a>)</td><td class="doc"><p>(connection, song_position, estimated_bpm) 
+</p></td></tr></table></div><div class="doc"><p>Opens a midi source with the possibility to sync to it. 
+</p><p>The user callback gets the the song position in <em>beats</em>, 
+ and also we return functions to query to song position and 
+ the estimated BPM. You may want to round the BPM to the nearest 
+ integer if that is appropriate. Song position is Nothing when
+ the playback is stopped.
+</p><p>Note that when first used, it may need some time to calibrate 
+ the bpm correctly, so start your MIDI host, press play, and 
+ wait a few second. Afterwards, it should be reasonably ok.
+ Also if you do fast realtime BPM changes, 
+ it will be a tiny little bit behind.
+</p><p>Note that we forward all messages (including clock messages) to 
+ the user, so you can implement your own handling of transport
+ (start<em>stop</em>continue) or send messages on clock if you want.
+</p></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.13.2</p></div></body></html>
