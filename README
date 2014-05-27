@@ -16,6 +16,10 @@ runghc Setup.lhs install
 
 When using the library, you *have* to link against the threaded runtime:
 
+ghc --make -threaded -O monitor.hs
+
+On OSX, try this:
+
 ghc --make -framework CoreAudio -framework CoreMIDI -framework CoreFoundation -threaded -O monitor.hs
 
 There are some example applications in the 'examples' directory.
